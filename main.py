@@ -4,7 +4,7 @@ import time
 from Ammeters.Circutor_Ammeter import CircutorAmmeter
 from Ammeters.Entes_Ammeter import EntesAmmeter
 from Ammeters.Greenlee_Ammeter import GreenleeAmmeter
-from Ammeters.client import request_current_from_ammeter
+from src.testing.test_framework import AmmeterTestFramework
 
 
 def run_greenlee_emulator():
@@ -25,13 +25,13 @@ if __name__ == "__main__":
     threading.Thread(target=run_entes_emulator, daemon=True).start()
     threading.Thread(target=run_circutor_emulator, daemon=True).start()
 
-    # This section is commented out because it shouldn't work.
-    # Read the README.md file as well as the source code if you need, and fix the problem.
-
-    # Wait for the servers to start, if you have problem restarting the servers between runs try increasing sleep time.
+    # Give the background servers a moment to bind their sockets.
     time.sleep(5)
-    # request_current_from_ammeter(5001, b'MEASURE_GREENLEE')  # Request from Greenlee Ammeter
-    # request_current_from_ammeter(5002, b'MEASURE_ENTES')  # Request from ENTES Ammeter
-    # request_current_from_ammeter(5003, b'MEASURE_CIRCUTOR')  # Request from CIRCUTOR Ammeter
 
-    pass
+    framework = AmmeterTestFramework()
+    for ammeter_type in ("greenlee", "entes", "circutor"):
+        result = framework.run_test(ammeter_type)
+        print(
+            f"{ammeter_type.upper()}: {len(result['measurements'])} measurements, "
+            f"mean {result['analysis']['mean']} A, test ID {result['test_id']}"
+        )
