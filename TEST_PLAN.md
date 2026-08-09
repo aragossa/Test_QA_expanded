@@ -7,8 +7,9 @@ configurable sampling, statistical analysis, and JSON result archiving.
 
 ## Out of scope
 
-Visualization, performance benchmarking, advanced statistical research, and a
-database-backed result service are outside this compact QA exercise.
+Performance benchmarking, interactive visualization, advanced statistical
+research, and a database-backed result service are outside this compact QA
+exercise.
 
 ## Assumptions
 
@@ -39,7 +40,7 @@ database-backed result service are outside this compact QA exercise.
 | T12 | Repeated measurements survive one rejected request | Integration | Real emulators | P1 | Passed |
 | T13 | Count-, duration-, and frequency-based sampling is deterministic | Unit + integration | Stubbed clock and real emulators | P0 | Passed |
 | T14 | Mean, median, population deviation, minimum, and maximum are correct | Unit | Fixed measurements | P0 | Passed |
-| T15 | Results have ID/metadata and can be archived, loaded, and compared | Unit | Temporary directory | P0 | Passed |
+| T15 | Results have ID/metadata and can be archived, listed, loaded, and compared | Unit | Temporary directory | P0 | Passed |
 
 ## Observation workflow
 
@@ -71,5 +72,5 @@ unrelated changes.
 ## Last execution
 
 - Command: `.venv/bin/python -m pytest -q`
-- Result: `42 passed`
+- Result: `52 passed`
 - Date: 2026-08-09

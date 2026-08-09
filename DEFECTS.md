@@ -53,8 +53,8 @@ Only reproducible defects are listed here. Suspected issues remain in the
 - **Expected:** `python -m pytest` collects and runs the delivered test suite.
 - **Actual:** Pytest also collected `src/testing/test_framework.py` by filename
   and failed on its package-relative import before running the suite.
-- **Minimal fix:** Add `pytest.ini` with `testpaths = tests`; the unrelated,
-  unfinished framework remains unchanged.
+- **Minimal fix:** Add `pytest.ini` with `testpaths = tests`; framework behavior
+  is covered separately after its implementation in D05.
 - **Verification:** Full test run completes successfully.
 
 ## D05 — Required sampling, analysis, and result management are not implemented
@@ -71,3 +71,29 @@ Only reproducible defects are listed here. Suspected issues remain in the
   sampling, statistics and JSON management, and activate the existing YAML
   configuration.
 - **Verification:** T13–T15 in `tests/test_framework.py`.
+
+## D06 — Supplied example cannot run the implemented workflow
+
+- **Status:** Fixed
+- **Severity:** Medium
+- **Detected by:** Deliverable review
+- **Affected file:** `examples/run_tests.py`
+- **Expected:** The supplied example invokes the working application flow.
+- **Actual:** Direct execution could not import `src`, omitted the required
+  ammeter argument, and did not start emulator servers.
+- **Minimal fix:** Refactor `main.py` to expose `main()` and make the example a
+  thin call to the same entry point.
+- **Verification:** `tests/test_main.py` and manual example execution.
+
+## D07 — Fixed startup delay is slow and can still race
+
+- **Status:** Fixed
+- **Severity:** Medium
+- **Detected by:** Reliability review
+- **Affected file:** `main.py`
+- **Expected:** Requests begin as soon as all emulators listen, or fail with a
+  clear timeout naming unavailable ports.
+- **Actual:** Startup always slept for five seconds without checking readiness.
+- **Minimal fix:** Poll only the three configured local ports within one bounded
+  deadline.
+- **Verification:** `tests/test_main.py`.

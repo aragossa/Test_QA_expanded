@@ -1,0 +1,32 @@
+{
+  "test_id": "sample-greenlee",
+  "created_at": "2026-08-09T10:00:00+00:00",
+  "ammeter_type": "greenlee",
+  "sampling": {
+    "measurements_count": 3,
+    "total_duration_seconds": null,
+    "sampling_frequency_hz": 2
+  },
+  "measurements": [0.98, 0.98, 0.98],
+  "analysis": {
+    "mean": 0.98,
+    "median": 0.98,
+    "standard_deviation": 0.0,
+    "minimum": 0.98,
+    "maximum": 0.98,
+    "consistency": {
+      "range": 0.0,
+      "coefficient_of_variation": 0.0,
+      "within_threshold": true
+    },
+    "accuracy": {
+      "reference_current": 1.0,
+      "bias": -0.020000000000000018,
+      "mean_absolute_error": 0.020000000000000018,
+      "root_mean_square_error": 0.020000000000000018,
+      "relative_error_percent": 2.0000000000000018,
+      "within_tolerance": true
+    }
+  },
+  "visualization": "sample_results/greenlee.png"
+}

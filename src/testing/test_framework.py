@@ -249,6 +249,23 @@ class AmmeterTestFramework:
         result_path = self.results_directory / f"{test_id}.json"
         return json.loads(result_path.read_text(encoding="utf-8"))
 
+    def list_results(self, ammeter_type=None) -> List[Dict]:
+        if not self.results_directory.exists():
+            return []
+
+        results = []
+        for result_path in self.results_directory.glob("*.json"):
+            result = json.loads(result_path.read_text(encoding="utf-8"))
+            if ammeter_type is None or result.get("ammeter_type") == ammeter_type:
+                results.append(
+                    {
+                        "test_id": result["test_id"],
+                        "created_at": result["created_at"],
+                        "ammeter_type": result["ammeter_type"],
+                    }
+                )
+        return sorted(results, key=lambda result: result["created_at"], reverse=True)
+
     def compare_results(self, *test_ids: str) -> Dict:
         if len(test_ids) < 2:
             raise ValueError("At least two test IDs are required for comparison")
@@ -265,7 +282,7 @@ class AmmeterTestFramework:
 
         by_accuracy = sorted(
             results,
-            key=lambda result: result["analysis"]["accuracy"]["root_mean_square_error"],
+            key=lambda result: result["analysis"]["accuracy"]["relative_error_percent"],
         )
         by_consistency = sorted(
             results,
@@ -283,7 +300,7 @@ class AmmeterTestFramework:
         by_reliability = sorted(
             results,
             key=lambda result: (
-                result["analysis"]["accuracy"]["root_mean_square_error"],
+                result["analysis"]["accuracy"]["relative_error_percent"],
                 (
                     result["analysis"]["consistency"]["coefficient_of_variation"]
                     if result["analysis"]["consistency"]["coefficient_of_variation"]

@@ -1,0 +1,7 @@
+{
+  "most_accurate": "entes",
+  "most_consistent": "greenlee",
+  "most_reliable": "entes",
+  "accuracy_ranking": ["entes", "greenlee", "circutor"],
+  "consistency_ranking": ["greenlee", "entes", "circutor"]
+}

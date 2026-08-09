@@ -1,20 +1,14 @@
-from src.testing.test_framework import AmmeterTestFramework
+"""Run the complete example from the repository root or this directory."""
 
-def main():
-    # יצירת מסגרת הבדיקות
-    framework = AmmeterTestFramework()
-    
-    # הרצת בדיקות לכל סוגי האמפרמטרים
-    ammeter_types = ["greenlee", "entes", "circutor"]
-    results = {}
-    
-    for ammeter_type in ammeter_types:
-        print(f"Testing {ammeter_type} ammeter...")
-        results[ammeter_type] = framework.run_test()
-        
-    # השוואת תוצאות
-    for ammeter_type, result in results.items():
-        print(f"\nResults for {ammeter_type}:")
+import sys
+from pathlib import Path
+
+PROJECT_ROOT = Path(__file__).resolve().parents[1]
+if str(PROJECT_ROOT) not in sys.path:
+    sys.path.insert(0, str(PROJECT_ROOT))
+
+from main import main
+
 
 if __name__ == "__main__":
-    main() 
+    main()

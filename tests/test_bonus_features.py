@@ -122,7 +122,10 @@ def test_ammeter_comparison_ranks_accuracy_consistency_and_reliability(tmp_path)
             "test_id": "greenlee",
             "ammeter_type": "greenlee",
             "analysis": {
-                "accuracy": {"root_mean_square_error": 0.2},
+                "accuracy": {
+                    "root_mean_square_error": 0.2,
+                    "relative_error_percent": 2.0,
+                },
                 "consistency": {"coefficient_of_variation": 0.04},
             },
         },
@@ -130,7 +133,10 @@ def test_ammeter_comparison_ranks_accuracy_consistency_and_reliability(tmp_path)
             "test_id": "entes",
             "ammeter_type": "entes",
             "analysis": {
-                "accuracy": {"root_mean_square_error": 0.1},
+                "accuracy": {
+                    "root_mean_square_error": 0.1,
+                    "relative_error_percent": 1.0,
+                },
                 "consistency": {"coefficient_of_variation": 0.05},
             },
         },
@@ -138,7 +144,10 @@ def test_ammeter_comparison_ranks_accuracy_consistency_and_reliability(tmp_path)
             "test_id": "circutor",
             "ammeter_type": "circutor",
             "analysis": {
-                "accuracy": {"root_mean_square_error": 0.3},
+                "accuracy": {
+                    "root_mean_square_error": 0.3,
+                    "relative_error_percent": 3.0,
+                },
                 "consistency": {"coefficient_of_variation": 0.0},
             },
         },

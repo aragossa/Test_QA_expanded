@@ -11,8 +11,10 @@ command and returns the measured current as a UTF-8 encoded number.
 
 ## Setup
 
-Python 3.10 or newer is recommended. Runtime configuration uses PyYAML and the
-tests use pytest; both are listed in the existing `requirements.txt`.
+Python 3.10 or newer is recommended. Direct dependencies are deliberately kept
+to three packages: PyYAML for configuration, matplotlib for PNG visualization,
+and pytest for tests. The final verification used PyYAML 6.0.3, matplotlib
+3.11.1, and pytest 9.1.1.
 
 ```sh
 python3 -m venv .venv
@@ -37,6 +39,12 @@ Example output shape (values and IDs vary):
 GREENLEE: 3 measurements, mean 0.0518 A, test ID f8d8bd7f...
 ENTES: 3 measurements, mean 88.2584 A, test ID b73d2e45...
 CIRCUTOR: 3 measurements, mean 0.0241 A, test ID a3edfae8...
+```
+
+The legacy example now calls the same working entry point:
+
+```sh
+.venv/bin/python examples/run_tests.py
 ```
 
 ## Configuration
@@ -69,8 +77,9 @@ Bonus behavior is configured under `bonus` in `config/config.yaml`:
 
 Accuracy is intentionally omitted unless `reference_currents` contains a known
 value for that device. Random emulator outputs alone cannot establish physical
-accuracy. `compare_ammeters` ranks accuracy by RMSE, consistency by CV, and
-reliability by RMSE with CV as the tie-breaker:
+accuracy. `compare_ammeters` ranks accuracy by relative error, consistency by
+CV, and reliability by relative error with CV as the tie-breaker. RMSE remains
+available in each individual device report:
 
 ```python
 comparison = framework.compare_ammeters(
@@ -94,9 +103,20 @@ Archived results can be retrieved or compared from Python:
 from src.testing.test_framework import AmmeterTestFramework
 
 framework = AmmeterTestFramework()
+available = framework.list_results()
 saved = framework.load_result("test_id")
 comparison = framework.compare_results("first_test_id", "second_test_id")
 ```
+
+`list_results("greenlee")` optionally filters the archive by device. Results are
+returned newest first, so UUIDs do not need to be found with filesystem tools.
+
+## Sample results
+
+The committed `sample_results/` directory contains three deterministic JSON
+reports, a cross-device comparison, and an example PNG. They demonstrate
+accuracy with explicit reference values and are labelled as software examples,
+not physical calibration results.
 
 ## Run the tests
 
@@ -111,6 +131,8 @@ ranges, deterministic formula calculations, connection failure, timeout,
 empty/malformed/non-finite responses, repeated measurements, configurable
 sampling, required statistics, and archive/retrieval/comparison of results. See
 `TEST_PLAN.md` for traceability and `DEFECTS.md` for findings.
+Configuration failures, result listing, startup readiness, the direct example,
+and committed sample artifacts also have regression coverage.
 
 ## Limitations
 
@@ -122,7 +144,23 @@ sampling, required statistics, and archive/retrieval/comparison of results. See
 - JSON archiving is intentionally local and has no locking for concurrent runs.
 - Accuracy rankings are meaningful only when reference currents come from a
   controlled external source and test conditions are comparable.
+- The original unused `TestLogger` scaffold is not part of the execution path;
+  console summaries and structured JSON provide result reporting.
+
+## Design decisions
+
+- The existing `AmmeterTestFramework` and YAML structure were completed instead
+  of introducing a separate framework.
+- Sampling fails fast: a failed request produces no misleading partial archive.
+- Population standard deviation describes the complete collected run.
+- JSON keeps archived results human-readable and dependency-free.
+- Accuracy requires a user-supplied reference; consistency never substitutes
+  for physical accuracy.
+- Fake TCP servers remain limited to responses that real emulators cannot
+  produce, while configurable error simulation exercises framework handling.
+- Local PNG and JSON output is sufficient here; logging services, databases, and
+  concurrent writers would add complexity without a requirement.
 
 ## Possible improvements
 
-Visualization could be added if it becomes a product requirement.
+Add file locking if concurrent processes need to write the same result archive.

@@ -144,6 +144,46 @@ def test_result_can_be_archived_loaded_and_compared(monkeypatch, tmp_path):
     }
 
 
+def test_archived_results_can_be_listed_and_filtered(tmp_path):
+    framework = build_framework(
+        tmp_path,
+        {
+            "measurements_count": 1,
+            "total_duration_seconds": None,
+            "sampling_frequency_hz": None,
+        },
+    )
+    archived = [
+        {
+            "test_id": "older-greenlee",
+            "created_at": "2026-08-09T08:00:00+00:00",
+            "ammeter_type": "greenlee",
+        },
+        {
+            "test_id": "newer-entes",
+            "created_at": "2026-08-09T09:00:00+00:00",
+            "ammeter_type": "entes",
+        },
+    ]
+    for result in archived:
+        framework.archive_result(result)
+
+    assert framework.list_results() == [
+        {
+            "test_id": "newer-entes",
+            "created_at": "2026-08-09T09:00:00+00:00",
+            "ammeter_type": "entes",
+        },
+        {
+            "test_id": "older-greenlee",
+            "created_at": "2026-08-09T08:00:00+00:00",
+            "ammeter_type": "greenlee",
+        },
+    ]
+    assert framework.list_results("greenlee") == [archived[0]]
+
+
+
 @pytest.mark.parametrize("emulator_class,minimum,maximum", AMMETERS)
 def test_framework_collects_from_each_real_ammeter(
     real_emulator, emulator_class, minimum, maximum, tmp_path
