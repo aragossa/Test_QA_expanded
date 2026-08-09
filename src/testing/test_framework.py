@@ -1,4 +1,6 @@
 import json
+import math
+import socket
 import statistics
 import time
 import uuid
@@ -20,14 +22,39 @@ class AmmeterTestFramework:
 
     def run_test(self, ammeter_type: str) -> Dict:
         measurements = self.collect_measurements(ammeter_type)
+        bonus_config = self.config.get("bonus") or {}
+        reference = (bonus_config.get("accuracy") or {}).get(
+            "reference_currents", {}
+        ).get(ammeter_type)
+        analysis = self.analyze(measurements)
+        analysis["consistency"] = self.evaluate_consistency(
+            measurements,
+            (bonus_config.get("consistency") or {}).get(
+                "maximum_coefficient_of_variation", 0.1
+            ),
+        )
+        if reference is not None:
+            analysis["accuracy"] = self.assess_accuracy(
+                measurements,
+                reference,
+                (bonus_config.get("accuracy") or {}).get(
+                    "tolerance_percent", 5.0
+                ),
+            )
+
         result = {
             "test_id": uuid.uuid4().hex,
             "created_at": datetime.now(timezone.utc).isoformat(),
             "ammeter_type": ammeter_type,
             "sampling": dict(self.config["testing"]["sampling"]),
             "measurements": measurements,
-            "analysis": self.analyze(measurements),
+            "analysis": analysis,
         }
+        visualization = bonus_config.get("visualization") or {}
+        if visualization.get("enabled", False):
+            result["visualization"] = str(
+                self.create_visualization(result, visualization.get("directory"))
+            )
         self.archive_result(result)
         return result
 
@@ -54,6 +81,8 @@ class AmmeterTestFramework:
             if duration is not None and elapsed >= duration:
                 break
 
+            sample_number = len(measurements) + 1
+            self._simulate_error(sample_number)
             measurements.append(
                 request_current_from_ammeter(
                     ammeter["port"],
@@ -73,6 +102,25 @@ class AmmeterTestFramework:
                     time.sleep(remaining)
 
         return measurements
+
+    def _simulate_error(self, sample_number: int) -> None:
+        simulation = (self.config.get("bonus") or {}).get("error_simulation") or {}
+        if not simulation.get("enabled", False):
+            return
+        if sample_number not in simulation.get("fail_on_samples", []):
+            return
+
+        error_type = simulation.get("type", "timeout")
+        errors = {
+            "timeout": socket.timeout("Simulated response timeout"),
+            "connection": ConnectionError("Simulated connection error"),
+            "malformed": ValueError("Simulated malformed response"),
+        }
+        try:
+            error = errors[error_type]
+        except KeyError as exception:
+            raise ValueError(f"Unsupported simulated error type: {error_type}") from exception
+        raise error
 
     @staticmethod
     def _validate_sampling(count, duration, frequency):
@@ -100,6 +148,97 @@ class AmmeterTestFramework:
             "maximum": max(measurements),
         }
 
+    @staticmethod
+    def evaluate_consistency(
+        measurements: List[float], maximum_coefficient_of_variation: float = 0.1
+    ) -> Dict:
+        if not measurements:
+            raise ValueError("Cannot evaluate an empty measurement set")
+        if maximum_coefficient_of_variation < 0:
+            raise ValueError("Consistency threshold cannot be negative")
+
+        mean = statistics.mean(measurements)
+        deviation = statistics.pstdev(measurements)
+        coefficient = deviation / abs(mean) if mean else None
+        return {
+            "range": max(measurements) - min(measurements),
+            "coefficient_of_variation": coefficient,
+            "within_threshold": (
+                coefficient is not None
+                and coefficient <= maximum_coefficient_of_variation
+            ),
+        }
+
+    @staticmethod
+    def assess_accuracy(
+        measurements: List[float], reference_current: float, tolerance_percent: float = 5.0
+    ) -> Dict:
+        if not measurements:
+            raise ValueError("Cannot assess an empty measurement set")
+        if tolerance_percent < 0:
+            raise ValueError("Accuracy tolerance cannot be negative")
+
+        errors = [measurement - reference_current for measurement in measurements]
+        mean_absolute_error = statistics.mean(abs(error) for error in errors)
+        root_mean_square_error = math.sqrt(
+            statistics.mean(error**2 for error in errors)
+        )
+        relative_error = (
+            mean_absolute_error / abs(reference_current) * 100
+            if reference_current
+            else None
+        )
+        return {
+            "reference_current": reference_current,
+            "bias": statistics.mean(errors),
+            "mean_absolute_error": mean_absolute_error,
+            "root_mean_square_error": root_mean_square_error,
+            "relative_error_percent": relative_error,
+            "within_tolerance": (
+                relative_error is not None and relative_error <= tolerance_percent
+            ),
+        }
+
+    def create_visualization(self, result: Dict, directory=None) -> Path:
+        try:
+            import matplotlib
+
+            matplotlib.use("Agg")
+            import matplotlib.pyplot as plt
+        except ImportError as error:
+            raise RuntimeError("Visualization requires matplotlib") from error
+
+        plot_directory = Path(directory or self.results_directory / "plots")
+        plot_directory.mkdir(parents=True, exist_ok=True)
+        plot_path = plot_directory / f"{result['test_id']}.png"
+        measurements = result["measurements"]
+
+        figure, axis = plt.subplots(figsize=(7, 4))
+        sample_numbers = range(1, len(measurements) + 1)
+        axis.plot(sample_numbers, measurements, marker="o", label="Current")
+        axis.axhline(
+            result["analysis"]["mean"], linestyle="--", label="Mean", color="tab:orange"
+        )
+        accuracy = result["analysis"].get("accuracy")
+        if accuracy:
+            axis.axhline(
+                accuracy["reference_current"],
+                linestyle=":",
+                label="Reference",
+                color="tab:green",
+            )
+        axis.set(
+            title=f"{result['ammeter_type'].upper()} current measurements",
+            xlabel="Sample",
+            ylabel="Current (A)",
+        )
+        axis.grid(alpha=0.3)
+        axis.legend()
+        figure.tight_layout()
+        figure.savefig(plot_path)
+        plt.close(figure)
+        return plot_path
+
     def archive_result(self, result: Dict) -> Path:
         self.results_directory.mkdir(parents=True, exist_ok=True)
         result_path = self.results_directory / f"{result['test_id']}.json"
@@ -115,4 +254,50 @@ class AmmeterTestFramework:
             raise ValueError("At least two test IDs are required for comparison")
         return {
             test_id: self.load_result(test_id)["analysis"] for test_id in test_ids
+        }
+
+    def compare_ammeters(self, *test_ids: str) -> Dict:
+        if len(test_ids) < 2:
+            raise ValueError("At least two test IDs are required for comparison")
+        results = [self.load_result(test_id) for test_id in test_ids]
+        if any("accuracy" not in result["analysis"] for result in results):
+            raise ValueError("All compared results require a reference current")
+
+        by_accuracy = sorted(
+            results,
+            key=lambda result: result["analysis"]["accuracy"]["root_mean_square_error"],
+        )
+        by_consistency = sorted(
+            results,
+            key=lambda result: (
+                result["analysis"]["consistency"]["coefficient_of_variation"]
+                is None,
+                (
+                    result["analysis"]["consistency"]["coefficient_of_variation"]
+                    if result["analysis"]["consistency"]["coefficient_of_variation"]
+                    is not None
+                    else float("inf")
+                ),
+            ),
+        )
+        by_reliability = sorted(
+            results,
+            key=lambda result: (
+                result["analysis"]["accuracy"]["root_mean_square_error"],
+                (
+                    result["analysis"]["consistency"]["coefficient_of_variation"]
+                    if result["analysis"]["consistency"]["coefficient_of_variation"]
+                    is not None
+                    else float("inf")
+                ),
+            ),
+        )
+        return {
+            "most_accurate": by_accuracy[0]["ammeter_type"],
+            "most_consistent": by_consistency[0]["ammeter_type"],
+            "most_reliable": by_reliability[0]["ammeter_type"],
+            "accuracy_ranking": [result["ammeter_type"] for result in by_accuracy],
+            "consistency_ranking": [
+                result["ammeter_type"] for result in by_consistency
+            ],
         }

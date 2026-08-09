@@ -20,3 +20,21 @@ ammeters:
 
 result_management:
   directory: results
+
+bonus:
+  visualization:
+    enabled: true
+    directory: results/plots
+  consistency:
+    maximum_coefficient_of_variation: 0.1
+  accuracy:
+    tolerance_percent: 5
+    # Accuracy is calculated only when a known reference current is provided.
+    reference_currents:
+      greenlee: null
+      entes: null
+      circutor: null
+  error_simulation:
+    enabled: false
+    type: timeout
+    fail_on_samples: []

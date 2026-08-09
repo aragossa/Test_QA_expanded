@@ -53,6 +53,15 @@ unless they block a P0 check.
 
 None.
 
+## Bonus checks
+
+| ID | Check | Type | Priority | Status |
+|---|---|---|---|---|
+| B01 | PNG visualization contains measurements, mean, and optional reference | Integration | P1 | Passed |
+| B02 | Measurement consistency is evaluated with range and coefficient of variation | Unit | P1 | Passed |
+| B03 | Accuracy and cross-ammeter rankings use explicit reference currents | Unit | P1 | Passed |
+| B04 | Timeout, connection, and malformed-response errors can be simulated deterministically | Unit | P1 | Passed |
+
 ## Stop criteria
 
 All P0 and P1 checks pass, `main.py` obtains one measurement from every emulator,
@@ -62,5 +71,5 @@ unrelated changes.
 ## Last execution
 
 - Command: `.venv/bin/python -m pytest -q`
-- Result: `34 passed`
+- Result: `42 passed`
 - Date: 2026-08-09

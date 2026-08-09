@@ -57,6 +57,37 @@ Each JSON result contains a unique test ID, UTC creation time, device name,
 sampling metadata, raw measurements, and the following population metrics:
 mean, median, standard deviation, minimum, and maximum.
 
+## Bonus features
+
+Bonus behavior is configured under `bonus` in `config/config.yaml`:
+
+- visualization writes a PNG with measurements, mean, and optional reference;
+- consistency reports range and coefficient of variation (CV);
+- accuracy reports bias, MAE, RMSE, relative error, and tolerance status;
+- error simulation raises a deterministic timeout, connection, or malformed
+  response error on selected sample numbers.
+
+Accuracy is intentionally omitted unless `reference_currents` contains a known
+value for that device. Random emulator outputs alone cannot establish physical
+accuracy. `compare_ammeters` ranks accuracy by RMSE, consistency by CV, and
+reliability by RMSE with CV as the tie-breaker:
+
+```python
+comparison = framework.compare_ammeters(
+    "greenlee_test_id", "entes_test_id", "circutor_test_id"
+)
+```
+
+To exercise error handling without changing an emulator, enable simulation and
+select one or more one-based sample numbers:
+
+```yaml
+error_simulation:
+  enabled: true
+  type: timeout  # timeout, connection, or malformed
+  fail_on_samples: [2]
+```
+
 Archived results can be retrieved or compared from Python:
 
 ```python
@@ -89,7 +120,8 @@ sampling, required statistics, and archive/retrieval/comparison of results. See
 - Timing tests use a deterministic fake clock and do not assess real-time
   scheduling precision.
 - JSON archiving is intentionally local and has no locking for concurrent runs.
-- Visualization and comparison of physical device accuracy are not implemented.
+- Accuracy rankings are meaningful only when reference currents come from a
+  controlled external source and test conditions are comparable.
 
 ## Possible improvements
 
